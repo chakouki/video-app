@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تحويل الصور إلى فيديو بالذكاء الاصطناعي</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body {
+      background: #0f172a; color: #f8fafc; margin: 0; padding: 20px;
+      display: flex; justify-content: center; align-items: center; min-height: 100vh;
+    }
+    .container {
+      background: #1e293b; padding: 30px; border-radius: 16px;
+      width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    h1 { text-align: center; font-size: 22px; margin-bottom: 20px; color: #38bdf8; }
+    .upload-box {
+      border: 2px dashed #475569; border-radius: 12px; padding: 25px;
+      text-align: center; cursor: pointer; margin-bottom: 15px; transition: 0.3s;
+    }
+    .upload-box:hover { border-color: #38bdf8; background: #0f172a; }
+    #preview { max-width: 100%; max-height: 220px; border-radius: 8px; display: none; margin: 10px auto 0; }
+    input[type="text"] {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #475569;
+      background: #0f172a; color: white; margin-bottom: 15px; font-size: 15px;
+    }
+    button {
+      width: 100%; padding: 14px; background: #0284c7; color: white; border: none;
+      border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s;
+    }
+    button:hover { background: #0369a1; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    .loader { display: none; text-align: center; margin-top: 15px; color: #38bdf8; }
+    .result { margin-top: 20px; text-align: center; display: none; }
+    video { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+    .download-btn {
+      display: inline-block; background: #10b981; color: white; padding: 10px 20px;
+      text-decoration: none; border-radius: 8px; font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>✨ حول صورتك إلى فيديو بالذكاء الاصطناعي</h1>
+
+  <div class="upload-box" onclick="document.getElementById('imageInput').click()">
+    <p id="uploadText">اضغط هنا لاختيار صورة من جهازك</p>
+    <img id="preview" alt="معاينة الصورة" />
+    <input type="file" id="imageInput" accept="image/*" hidden />
+  </div>
+
+  <input type="text" id="promptInput" placeholder="اكتب وصف الحركة بالإنجليزية (مثال: cinematic zoom in, smiling)" />
+
+  <button id="generateBtn" onclick="generateVideo()">توليد الفيديو الآن</button>
+
+  <div class="loader" id="loader">⏳ جاري معالجة الفيديو... قد يستغرق الأمر من 20 إلى 40 ثانية</div>
+
+  <div class="result" id="resultBox">
+    <video id="outputVideo" controls autoplay loop></video>
+    <a id="downloadLink" class="download-btn" download="ai-video.mp4">⬇️ تحميل الفيديو</a>
+  </div>
+</div>
+
+<script>
+  let base64Image = "";
+
+  document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      base64Image = event.target.result;
+      const preview = document.getElementById('preview');
+      preview.src = base64Image;
+      preview.style.display = 'block';
+      document.getElementById('uploadText').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function generateVideo() {
+    if (!base64Image) {
+      alert("عافاك اختار صورة هي الأولى!");
+      return;
+    }
+
+    const prompt = document.getElementById('promptInput').value || "smooth cinematic motion";
+    const btn = document.getElementById('generateBtn');
+    const loader = document.getElementById('loader');
+    const resultBox = document.getElementById('resultBox');
+
+    btn.disabled = true;
+    loader.style.display = 'block';
+    resultBox.style.display = 'none';
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image, prompt: prompt })
+      });
+
+      if (!response.ok) throw new Error("فشل في توليد الفيديو");
+
+      const blob = await response.blob();
+      const videoUrl = URL.createObjectURL(blob);
+
+      document.getElementById('outputVideo').src = videoUrl;
+      document.getElementById('downloadLink').href = videoUrl;
+      resultBox.style.display = 'block';
+    } catch (error) {
+      alert("وقع خطأ أثناء التوليد. تأكد من مفتاح API أو حاول مرة أخرى بعد قليل.");
+      console.error(error);
+    } finally {
+      btn.disabled = false;
+      loader.style.display = 'none';
+    }
+  }
+</script>
+
+</body>
+</html>
